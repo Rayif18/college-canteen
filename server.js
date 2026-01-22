@@ -45,17 +45,20 @@ io.on('connection', (socket) => {
 
   // Handle place order
   socket.on('placeOrder', (orderData) => {
+    console.log('Received placeOrder:', orderData);
     orderData.forEach((qty, i) => {
-      if (qty > 0) {
+      if (qty > 0 && i < menu.length) {
         menu[i].orders += qty;
       }
     });
     saveMenu(menu);
+    console.log('Updated menu:', menu);
     io.emit('menuUpdate', menu); // Broadcast to all clients
   });
 
   // Handle add item
   socket.on('addItem', (item) => {
+    console.log('Received addItem:', item);
     menu.push(item);
     saveMenu(menu);
     io.emit('menuUpdate', menu);
@@ -63,6 +66,7 @@ io.on('connection', (socket) => {
 
   // Handle remove item
   socket.on('removeItem', (index) => {
+    console.log('Received removeItem:', index);
     menu.splice(index, 1);
     saveMenu(menu);
     io.emit('menuUpdate', menu);

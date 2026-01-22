@@ -2,7 +2,7 @@
   {
     "name": "Samosa",
     "price": 15,
-    "orders": 0
+    "orders": 5
   },
   {
     "name": "Veg Puff",
@@ -12,6 +12,11 @@
   {
     "name": "Cold Drink",
     "price": 30,
+    "orders": 0
+  },
+  {
+    "name": "a",
+    "price": 1,
     "orders": 0
   }
 ]

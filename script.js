@@ -7,7 +7,12 @@ let socket;
 document.addEventListener('DOMContentLoaded', () => {
   socket = io();
 
+  socket.on('connect', () => {
+    console.log('Socket connected');
+  });
+
   socket.on('menuUpdate', (updatedMenu) => {
+    console.log('Menu updated:', updatedMenu);
     menu = updatedMenu;
     if (document.getElementById("userSection").style.display !== "none") {
       loadMenu();
@@ -15,6 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById("adminPanel").style.display !== "none") {
       loadAdminMenu();
     }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected');
   });
 });
 
@@ -77,6 +86,7 @@ function placeOrder() {
     input.value = 0;
   });
 
+  console.log('Emitting placeOrder:', orderData);
   socket.emit('placeOrder', orderData);
   calculateTotal();
   alert("Order placed successfully!");
