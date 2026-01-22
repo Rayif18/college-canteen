@@ -117,14 +117,14 @@ function placeOrder() {
   console.log('Emitting placeOrder:', orderData);
   socket.emit('placeOrder', orderData);
 
-  // Reset inputs
-  document.querySelectorAll(".menu-item input").forEach(input => input.value = 0);
-  calculateTotal();
-
   setTimeout(() => {
     button.disabled = false;
     button.textContent = 'Place Order 🛒';
     showNotification('Order placed successfully!');
+
+    // Reset inputs after showing success message
+    document.querySelectorAll(".menu-item input").forEach(input => input.value = 0);
+    calculateTotal();
   }, 1000);
 }
 
