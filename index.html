@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College Mini Canteen</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2e7d32">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>🍔 College Mini Canteen</h1>
+  <p>For College Students Only</p>
+</header>
+
+<!-- Login Page -->
+<section id="login" class="box">
+  <h2>Login</h2>
+  <button onclick="loginAsUser()">Login as User</button>
+  <button onclick="loginAsAdmin()">Login as Admin</button>
+</section>
+
+<!-- Admin Password Section (shown only after selecting Admin) -->
+<section id="adminPassSection" class="box" style="display:none;">
+  <h2>Admin Login</h2>
+  <input type="password" id="adminPass" placeholder="Admin Password">
+  <button onclick="adminLogin()">Login</button>
+</section>
+
+<!-- User Ordering Section (shown only for users) -->
+<section id="userSection" class="box" style="display:none;">
+  <h2>Today's Menu</h2>
+  <div id="menu"></div>
+  <h3>Total: ₹ <span id="total">0</span></h3>
+  <button onclick="placeOrder()">Place Order</button>
+  <button onclick="logout()">Back to Login</button>
+</section>
+
+<!-- Admin Panel (shown only for admins, no menu) -->
+<section id="adminPanel" class="box" style="display:none;">
+  <h2>👨‍🍳 Admin Panel</h2>
+  <input type="text" id="itemName" placeholder="Food / Drink Name">
+  <input type="number" id="itemPrice" placeholder="Price">
+  <button onclick="addItem()">Add Item</button>
+  <h3>Orders List</h3>
+  <ul id="adminMenu"></ul>
+  <button onclick="logout()">Back to Login</button>
+</section>
+
+<script src="script.js"></script>
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+</body>
+</html>
