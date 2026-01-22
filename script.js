@@ -45,15 +45,18 @@ function adminLogin() {
     document.getElementById("adminPanel").style.display = "block";
     loadAdminMenu();
   } else {
-    alert("Wrong password");
+    showNotification("Wrong password", 'error');
   }
 }
 
-function logout() {
-  document.getElementById("userSection").style.display = "none";
-  document.getElementById("adminPanel").style.display = "none";
-  document.getElementById("adminPassSection").style.display = "none";
-  document.getElementById("login").style.display = "block";
+function showNotification(message, type = 'success') {
+  const notification = document.getElementById('notification');
+  notification.textContent = message;
+  notification.className = `notification ${type}`;
+  notification.style.display = 'block';
+  setTimeout(() => {
+    notification.style.display = 'none';
+  }, 3000);
 }
 
 /* User Functions */
@@ -83,16 +86,35 @@ function calculateTotal() {
 
 function placeOrder() {
   const orderData = [];
-  document.querySelectorAll(".menu-item input").forEach((input, i) => {
-    const qty = Number(input.value);
-    orderData.push(qty);
-    input.value = 0;
+  document.querySelectorAll(".menu-item").forEach(item => {
+    const id = item.dataset.id;
+    const qty = Number(item.querySelector('input').value);
+    if (qty > 0) {
+      orderData.push({ id, qty });
+    }
   });
+
+  if (orderData.length === 0) {
+    showNotification("Please select at least one item.", 'error');
+    return;
+  }
+
+  const button = document.querySelector('#userSection .btn-success');
+  button.disabled = true;
+  button.textContent = 'Placing Order...';
 
   console.log('Emitting placeOrder:', orderData);
   socket.emit('placeOrder', orderData);
+
+  // Reset inputs
+  document.querySelectorAll(".menu-item input").forEach(input => input.value = 0);
   calculateTotal();
-  alert("Order placed successfully!");
+
+  setTimeout(() => {
+    button.disabled = false;
+    button.textContent = 'Place Order 🛒';
+    showNotification('Order placed successfully!');
+  }, 1000);
 }
 
 /* Admin Functions */
@@ -100,17 +122,21 @@ function addItem() {
   const name = document.getElementById("itemName").value.trim();
   const price = document.getElementById("itemPrice").value;
 
-  if (!name || !price) return alert("Enter item details");
+  if (!name || !price) {
+    showNotification("Enter item details.", 'error');
+    return;
+  }
 
   const item = { name, price: Number(price), orders: 0 };
   socket.emit('addItem', item);
 
   document.getElementById("itemName").value = "";
   document.getElementById("itemPrice").value = "";
+  showNotification('Item added successfully!');
 }
 
-function removeItem(index) {
-  socket.emit('removeItem', index);
+function removeItem(id) {
+  socket.emit('removeItem', id);
 }
 
 function loadAdminMenu() {
@@ -119,11 +145,11 @@ function loadAdminMenu() {
 
   menu.forEach((item, index) => {
     list.innerHTML += `
-      <li class="admin-item">
+      <li class="admin-item" data-id="${item._id}">
         <div>
           <strong>${item.name}</strong> - ₹${item.price} | Orders: <span class="order-count">${item.orders}</span>
         </div>
-        <button onclick="removeItem(${index})">Remove</button>
+        <button onclick="removeItem('${item._id}')">Remove</button>
       </li>`;
   });
 }

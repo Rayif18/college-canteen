@@ -275,30 +275,25 @@ header {
   border-bottom: none;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .header-content h1 {
-    font-size: 2rem;
-  }
+/* Notification */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #4CAF50;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 5px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  z-index: 1000;
+  animation: slideIn 0.3s ease;
+}
 
-  .card {
-    margin: 1rem;
-    padding: 1.5rem;
-  }
+.notification.error {
+  background: #f44336;
+}
 
-  .menu-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .form-row {
-    flex-direction: column;
-  }
-
-  .button-group {
-    flex-direction: column;
-  }
-
-  .btn {
-    width: 100%;
-  }
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
