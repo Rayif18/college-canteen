@@ -64,8 +64,11 @@ function loadMenu() {
   menu.forEach((item, i) => {
     menuDiv.innerHTML += `
       <div class="menu-item">
-        <div><b>${item.name}</b><br>₹${item.price}</div>
-        <input type="number" min="0" value="0" onchange="calculateTotal()">
+        <div>
+          <h4>${item.name}</h4>
+          <p>₹${item.price}</p>
+        </div>
+        <input type="number" min="0" value="0" onchange="calculateTotal()" placeholder="Qty">
       </div>`;
   });
 }
@@ -117,7 +120,9 @@ function loadAdminMenu() {
   menu.forEach((item, index) => {
     list.innerHTML += `
       <li class="admin-item">
-        ${item.name} - ₹${item.price} | Orders: ${item.orders}
+        <div>
+          <strong>${item.name}</strong> - ₹${item.price} | Orders: <span class="order-count">${item.orders}</span>
+        </div>
         <button onclick="removeItem(${index})">Remove</button>
       </li>`;
   });

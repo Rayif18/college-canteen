@@ -6,49 +6,64 @@
 <title>College Mini Canteen</title>
 
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2e7d32">
+<meta name="theme-color" content="#4CAF50">
 
 <link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <header>
-  <h1>🍔 College Mini Canteen</h1>
-  <p>For College Students Only</p>
+  <div class="header-content">
+    <h1>🍔 College Mini Canteen</h1>
+    <p>Your favorite snacks, just a tap away!</p>
+  </div>
 </header>
 
 <!-- Login Page -->
-<section id="login" class="box">
-  <h2>Login</h2>
-  <button onclick="loginAsUser()">Login as User</button>
-  <button onclick="loginAsAdmin()">Login as Admin</button>
+<section id="login" class="card login-section">
+  <h2>Welcome!</h2>
+  <p>Choose your role to get started</p>
+  <div class="button-group">
+    <button class="btn btn-primary" onclick="loginAsUser()">👤 Login as User</button>
+    <button class="btn btn-secondary" onclick="loginAsAdmin()">👨‍💼 Login as Admin</button>
+  </div>
 </section>
 
-<!-- Admin Password Section (shown only after selecting Admin) -->
-<section id="adminPassSection" class="box" style="display:none;">
-  <h2>Admin Login</h2>
-  <input type="password" id="adminPass" placeholder="Admin Password">
-  <button onclick="adminLogin()">Login</button>
+<!-- Admin Password Section -->
+<section id="adminPassSection" class="card" style="display:none;">
+  <h2>Admin Access</h2>
+  <div class="form-group">
+    <input type="password" id="adminPass" placeholder="Enter Admin Password" class="input-field">
+  </div>
+  <button class="btn btn-primary" onclick="adminLogin()">Login</button>
 </section>
 
-<!-- User Ordering Section (shown only for users) -->
-<section id="userSection" class="box" style="display:none;">
-  <h2>Today's Menu</h2>
-  <div id="menu"></div>
-  <h3>Total: ₹ <span id="total">0</span></h3>
-  <button onclick="placeOrder()">Place Order</button>
-  <button onclick="logout()">Back to Login</button>
+<!-- User Ordering Section -->
+<section id="userSection" class="card" style="display:none;">
+  <h2>🍽️ Today's Menu</h2>
+  <div id="menu" class="menu-grid"></div>
+  <div class="order-summary">
+    <h3>Total: ₹<span id="total">0</span></h3>
+    <button class="btn btn-success" onclick="placeOrder()">Place Order 🛒</button>
+    <button class="btn btn-secondary" onclick="logout()" style="margin-top: 10px;">Back to Login</button>
+  </div>
 </section>
 
-<!-- Admin Panel (shown only for admins, no menu) -->
-<section id="adminPanel" class="box" style="display:none;">
-  <h2>👨‍🍳 Admin Panel</h2>
-  <input type="text" id="itemName" placeholder="Food / Drink Name">
-  <input type="number" id="itemPrice" placeholder="Price">
-  <button onclick="addItem()">Add Item</button>
-  <h3>Orders List</h3>
-  <ul id="adminMenu"></ul>
-  <button onclick="logout()">Back to Login</button>
+<!-- Admin Panel -->
+<section id="adminPanel" class="card" style="display:none;">
+  <h2>👨‍🍳 Admin Dashboard</h2>
+  <div class="admin-form">
+    <h3>Add New Item</h3>
+    <div class="form-row">
+      <input type="text" id="itemName" placeholder="Item Name" class="input-field">
+      <input type="number" id="itemPrice" placeholder="Price (₹)" class="input-field">
+      <button class="btn btn-primary" onclick="addItem()">Add Item ➕</button>
+    </div>
+  </div>
+  <h3>📊 Orders Overview</h3>
+  <ul id="adminMenu" class="admin-list"></ul>
+  <button class="btn btn-secondary" onclick="logout()" style="margin-top: 20px;">Back to Login</button>
 </section>
 
 <script src="script.js"></script>
