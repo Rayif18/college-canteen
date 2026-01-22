@@ -293,6 +293,15 @@ header {
   background: #f44336;
 }
 
+.notification.update {
+  background: #2196F3;
+  cursor: pointer;
+}
+
+.notification.update:hover {
+  background: #1976D2;
+}
+
 @keyframes slideIn {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }

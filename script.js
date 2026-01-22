@@ -167,5 +167,57 @@ function loadAdminMenu() {
 
 /* PWA */
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
+  navigator.serviceWorker.register("service-worker.js")
+    .then(registration => {
+      console.log('Service Worker registered');
+
+      // Check for updates
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version available
+            showUpdateNotification();
+          }
+        });
+      });
+
+      // If there's already a waiting service worker, show update prompt
+      if (registration.waiting) {
+        showUpdateNotification();
+      }
+    })
+    .catch(error => {
+      console.log('Service Worker registration failed:', error);
+    });
+
+  // Listen for messages from service worker
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+      window.location.reload();
+    }
+  });
+}
+
+function showUpdateNotification() {
+  const notification = document.getElementById('notification');
+  notification.textContent = 'New version available! Click to update.';
+  notification.className = 'notification update';
+  notification.style.display = 'block';
+  notification.style.cursor = 'pointer';
+  notification.onclick = () => {
+    // Tell the service worker to skip waiting
+    navigator.serviceWorker.ready.then(registration => {
+      if (registration.waiting) {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+    });
+  };
+
+  // Auto-hide after 10 seconds
+  setTimeout(() => {
+    if (notification.className.includes('update')) {
+      notification.style.display = 'none';
+    }
+  }, 10000);
 }
