@@ -66,7 +66,7 @@ function loadMenu() {
 
   menu.forEach((item, i) => {
     menuDiv.innerHTML += `
-      <div class="menu-item">
+      <div class="menu-item" data-id="${item.id}">
         <div>
           <h4>${item.name}</h4>
           <p>₹${item.price}</p>
@@ -145,11 +145,11 @@ function loadAdminMenu() {
 
   menu.forEach((item, index) => {
     list.innerHTML += `
-      <li class="admin-item" data-id="${item._id}">
+      <li class="admin-item" data-id="${item.id}">
         <div>
           <strong>${item.name}</strong> - ₹${item.price} | Orders: <span class="order-count">${item.orders}</span>
         </div>
-        <button onclick="removeItem('${item._id}')">Remove</button>
+        <button onclick="removeItem('${item.id}')">Remove</button>
       </li>`;
   });
 }

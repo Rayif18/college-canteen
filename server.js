@@ -28,7 +28,7 @@ io.on('connection', (socket) => {
   socket.on('placeOrder', (orderData) => {
     console.log('Received placeOrder:', orderData);
     for (const { id, qty } of orderData) {
-      const item = menu.find(item => item.id === id);
+      const item = menu.find(item => item.id === parseInt(id));
       if (item) {
         item.orders += qty;
       }
@@ -48,7 +48,7 @@ io.on('connection', (socket) => {
   // Handle remove item
   socket.on('removeItem', (id) => {
     console.log('Received removeItem:', id);
-    menu = menu.filter(item => item.id !== id);
+    menu = menu.filter(item => item.id !== parseInt(id));
     io.emit('menuUpdate', menu);
   });
 
