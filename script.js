@@ -49,6 +49,17 @@ function adminLogin() {
   }
 }
 
+function logout() {
+  // Hide all sections
+  document.getElementById("userSection").style.display = "none";
+  document.getElementById("adminPassSection").style.display = "none";
+  document.getElementById("adminPanel").style.display = "none";
+  // Show login
+  document.getElementById("login").style.display = "block";
+  // Reset admin password field
+  document.getElementById("adminPass").value = "";
+}
+
 function showNotification(message, type = 'success') {
   const notification = document.getElementById('notification');
   notification.textContent = message;
