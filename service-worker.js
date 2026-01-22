@@ -31,6 +31,13 @@ self.addEventListener('activate', event => {
   );
   // Take control of all clients immediately
   self.clients.claim();
+
+  // Force refresh all open tabs
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => {
+      client.postMessage({ type: 'REFRESH_PAGE' });
+    });
+  });
 });
 
 // Listen for messages from the client

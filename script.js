@@ -196,6 +196,10 @@ if ("serviceWorker" in navigator) {
     if (event.data && event.data.type === 'SKIP_WAITING') {
       window.location.reload();
     }
+    if (event.data && event.data.type === 'REFRESH_PAGE') {
+      console.log('Service worker updated, refreshing page...');
+      window.location.reload();
+    }
   });
 }
 
