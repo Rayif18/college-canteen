@@ -1,44 +1,20 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const mongoose = require('mongoose');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/canteen'; // Replace with your MongoDB Atlas URI
 
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI)
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
-
-// Menu Schema
-const menuSchema = new mongoose.Schema({
-  name: String,
-  price: Number,
-  orders: { type: Number, default: 0 }
-});
-
-const MenuItem = mongoose.model('MenuItem', menuSchema);
-
-// Initialize default menu if empty
-async function initializeMenu() {
-  const count = await MenuItem.countDocuments();
-  if (count === 0) {
-    const defaultItems = [
-      { name: "Samosa", price: 15, orders: 0 },
-      { name: "Veg Puff", price: 25, orders: 0 },
-      { name: "Cold Drink", price: 30, orders: 0 }
-    ];
-    await MenuItem.insertMany(defaultItems);
-    console.log('Default menu initialized');
-  }
-}
-
-initializeMenu();
+// In-memory menu storage
+let menu = [
+  { id: 1, name: "Samosa", price: 15, orders: 0 },
+  { id: 2, name: "Veg Puff", price: 25, orders: 0 },
+  { id: 3, name: "Cold Drink", price: 30, orders: 0 }
+];
+let nextId = 4;
 
 app.use(express.static('.'));
 
@@ -46,48 +22,34 @@ io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
   // Send current menu to new client
-  MenuItem.find().then(menu => {
-    socket.emit('menuUpdate', menu);
-  }).catch(err => console.error('Error fetching menu:', err));
+  socket.emit('menuUpdate', menu);
 
   // Handle place order
-  socket.on('placeOrder', async (orderData) => {
+  socket.on('placeOrder', (orderData) => {
     console.log('Received placeOrder:', orderData);
-    try {
-      for (const { id, qty } of orderData) {
-        await MenuItem.findByIdAndUpdate(id, { $inc: { orders: qty } });
+    for (const { id, qty } of orderData) {
+      const item = menu.find(item => item.id === id);
+      if (item) {
+        item.orders += qty;
       }
-      const updatedMenu = await MenuItem.find();
-      console.log('Updated menu:', updatedMenu);
-      io.emit('menuUpdate', updatedMenu);
-    } catch (err) {
-      console.error('Error placing order:', err);
     }
+    console.log('Updated menu:', menu);
+    io.emit('menuUpdate', menu);
   });
 
   // Handle add item
-  socket.on('addItem', async (item) => {
+  socket.on('addItem', (item) => {
     console.log('Received addItem:', item);
-    try {
-      const newItem = new MenuItem(item);
-      await newItem.save();
-      const updatedMenu = await MenuItem.find();
-      io.emit('menuUpdate', updatedMenu);
-    } catch (err) {
-      console.error('Error adding item:', err);
-    }
+    const newItem = { id: nextId++, ...item };
+    menu.push(newItem);
+    io.emit('menuUpdate', menu);
   });
 
   // Handle remove item
-  socket.on('removeItem', async (id) => {
+  socket.on('removeItem', (id) => {
     console.log('Received removeItem:', id);
-    try {
-      await MenuItem.findByIdAndDelete(id);
-      const updatedMenu = await MenuItem.find();
-      io.emit('menuUpdate', updatedMenu);
-    } catch (err) {
-      console.error('Error removing item:', err);
-    }
+    menu = menu.filter(item => item.id !== id);
+    io.emit('menuUpdate', menu);
   });
 
   socket.on('disconnect', () => {
