@@ -87,8 +87,21 @@ function loginAsUser() {
 function submitUserLogin() {
   const name = document.getElementById('userName').value.trim();
   const email = document.getElementById('userEmail').value.trim().toLowerCase();
-  if (!name || !email) {
-    showNotification('Enter name and email', 'error');
+  
+  // Validate name
+  if (!name) {
+    showNotification('Please enter your name', 'error');
+    return;
+  }
+  
+  // Validate email format (proper regex)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email) {
+    showNotification('Please enter your email', 'error');
+    return;
+  }
+  if (!emailRegex.test(email)) {
+    showNotification('Please enter a valid email address (e.g., user@example.com)', 'error');
     return;
   }
 
@@ -104,19 +117,12 @@ function submitUserLogin() {
   loadMenu();
 }
 
-// Restore stored user on load
 // Restore session token from cookie and resume session with server
 document.addEventListener('DOMContentLoaded', () => {
   try {
     const token = getCookie('canteen_token');
     if (token && socket && socket.connected) {
       socket.emit('resumeSession', token);
-    } else {
-      // fallback to localStorage if present (legacy)
-      try {
-        const stored = localStorage.getItem('canteenUser');
-        if (stored) window.currentUser = JSON.parse(stored);
-      } catch (e) {}
     }
   } catch (e) {}
 });
@@ -209,9 +215,9 @@ function placeOrder() {
   button.disabled = true;
   button.textContent = 'Placing Order...';
 
-  // Build payload including user info
-  const user = window.currentUser || JSON.parse(localStorage.getItem('canteenUser') || 'null');
-  if (!user) {
+  // Get user from window (set by server on login/resume)
+  const user = window.currentUser;
+  if (!user || !user.email) {
     showNotification('Please login with name and email first.', 'error');
     button.disabled = false;
     button.textContent = 'Place Order 🛒';
