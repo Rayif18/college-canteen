@@ -245,11 +245,19 @@ function loadAdminOrders() {
     document.getElementById('adminPanel').appendChild(container);
   }
   const orders = window.allOrders || [];
-  if (orders.length === 0) {
+  const query = (document.getElementById('adminSearch') && document.getElementById('adminSearch').value || '').toLowerCase().trim();
+  const filtered = orders.filter(o => {
+    if (!query) return true;
+    if ((o.orderId + '').includes(query)) return true;
+    if ((o.user && o.user.name && o.user.name.toLowerCase().includes(query)) || (o.user && o.user.email && o.user.email.toLowerCase().includes(query))) return true;
+    if (o.items && o.items.some(it => it.name.toLowerCase().includes(query))) return true;
+    return false;
+  });
+  if (filtered.length === 0) {
     container.innerHTML = '<h3>No orders yet</h3>';
     return;
   }
-  container.innerHTML = '<h3>All Orders</h3>' + orders.map(o => {
+  container.innerHTML = '<h3>All Orders</h3>' + filtered.map(o => {
     const items = o.items.map(it => `${it.qty} x ${it.name} (₹${it.price})`).join('<br>');
     return `
       <div class="card" style="padding:10px;margin-bottom:10px;">
@@ -300,7 +308,10 @@ function showReceipt(order) {
     <p><strong>${order.user.name}</strong> &lt;${order.user.email}&gt;</p>
     <div>${order.items.map(it => `<div>${it.qty} x ${it.name} — ₹${it.price} each</div>`).join('')}</div>
     <h4>Total: ₹${order.total}</h4>
-    <button class="btn btn-primary" id="closeReceipt">Close</button>
+    <div style="margin-top:10px">
+      <button class="btn btn-primary" id="printReceipt">Print</button>
+      <button class="btn btn-secondary" id="closeReceipt">Close</button>
+    </div>
   `;
   document.body.appendChild(receipt);
   document.getElementById('closeReceipt').onclick = () => {
@@ -309,6 +320,21 @@ function showReceipt(order) {
     document.querySelectorAll('.menu-item input').forEach(i => i.value = 0);
     calculateTotal();
   };
+  document.getElementById('printReceipt').onclick = () => {
+    printReceiptContent(receipt.innerHTML);
+  };
+}
+
+function printReceiptContent(html) {
+  const w = window.open('', '_blank');
+  w.document.write('<html><head><title>Receipt</title>');
+  w.document.write('<link rel="stylesheet" href="style.css">');
+  w.document.write('</head><body>');
+  w.document.write(html);
+  w.document.write('</body></html>');
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); w.close(); }, 500);
 }
 
 /* PWA */

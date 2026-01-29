@@ -74,6 +74,9 @@
     </div>
   </div>
   <h3>📊 Orders Overview</h3>
+  <div style="margin-top:10px;">
+    <input type="text" id="adminSearch" placeholder="Search orders by ID, name, email, item..." class="input-field" style="width:100%;" oninput="loadAdminOrders()">
+  </div>
   <ul id="adminMenu" class="admin-list"></ul>
   <button class="btn btn-secondary" onclick="logout()" style="margin-top: 20px;">Back to Login</button>
 </section>

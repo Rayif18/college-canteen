@@ -59,12 +59,18 @@ io.on('connection', (socket) => {
   // Register user login (stores user if new)
   socket.on('userLogin', (user) => {
     if (!user || !user.email) return;
-    const exists = data.users.find(u => u.email === user.email.toLowerCase());
+    const email = user.email.toLowerCase();
+    const exists = data.users.find(u => u.email === email);
     if (!exists) {
-      data.users.push({ name: user.name, email: user.email.toLowerCase() });
+      data.users.push({ name: user.name, email });
       saveData();
     }
-    console.log('User logged in:', user.email);
+    // Add socket to a room for this user so we can push updates to all their devices
+    socket.join(`user:${email}`);
+    console.log('User logged in and joined room:', email);
+    // Send current history immediately
+    const history = data.orders.filter(o => (o.user && o.user.email === email));
+    socket.emit('userHistory', history);
   });
 
   socket.on('requestUserHistory', (email) => {
@@ -108,6 +114,10 @@ io.on('connection', (socket) => {
       // Broadcast updates
       io.emit('menuUpdate', data.menu);
       io.emit('ordersUpdate', data.orders);
+
+      // Push updated history to all devices of this user (room)
+      io.to(`user:${order.user.email}`).emit('userHistory', data.orders.filter(o => o.user.email === order.user.email));
+
       console.log('Order placed:', order.orderId);
     } catch (err) {
       console.error('Error processing order:', err);
