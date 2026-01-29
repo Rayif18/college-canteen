@@ -27,10 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
   socket.on('ordersUpdate', (orders) => {
     console.log('Orders updated:', orders);
     window.allOrders = orders;
-    // update admin orders list if admin panel shown
-    if (document.getElementById('adminPanel').style.display !== 'none') {
-      loadAdminOrders();
-    }
+    // Always refresh admin orders view if it exists
+    try { loadAdminOrders(); } catch (e) {}
     // if current user, request history update
     if (window.currentUser && window.currentUser.email) {
       socket.emit('requestUserHistory', window.currentUser.email);
@@ -57,6 +55,27 @@ document.addEventListener('DOMContentLoaded', () => {
   socket.on('disconnect', () => {
     console.log('Socket disconnected');
   });
+
+  // handle server-provided session/token after user login
+  socket.on('userLogged', payload => {
+    if (!payload) return;
+    window.currentUser = payload.user;
+    if (payload.token) setCookie('canteen_token', payload.token, 365);
+    showNotification(`Logged in as ${payload.user.name}`);
+  });
+
+  socket.on('sessionResumed', payload => {
+    if (!payload) return;
+    window.currentUser = payload.user;
+    window.userHistory = payload.history || [];
+    renderUserHistory();
+    showNotification(`Welcome back, ${payload.user.name}`);
+    if (document.getElementById('userLoginSection').style.display !== 'none') {
+      document.getElementById('userLoginSection').style.display = 'none';
+      document.getElementById('userSection').style.display = 'block';
+      loadMenu();
+    }
+  });
 });
 
 /* Login Functions */
@@ -74,30 +93,43 @@ function submitUserLogin() {
   }
 
   const user = { name, email };
-  // Save locally for future reference
-  localStorage.setItem('canteenUser', JSON.stringify(user));
   window.currentUser = user;
 
-  // Notify server about user (for history tracking)
+  // Notify server about user (for server-side persistence and token)
   if (socket && socket.connected) socket.emit('userLogin', user);
 
-  // Show menu
+  // Show menu immediately
   document.getElementById('userLoginSection').style.display = 'none';
   document.getElementById('userSection').style.display = 'block';
   loadMenu();
-  // Request order history for this user
-  if (socket && socket.connected) socket.emit('requestUserHistory', user.email);
 }
 
 // Restore stored user on load
+// Restore session token from cookie and resume session with server
 document.addEventListener('DOMContentLoaded', () => {
   try {
-    const stored = localStorage.getItem('canteenUser');
-    if (stored) {
-      window.currentUser = JSON.parse(stored);
+    const token = getCookie('canteen_token');
+    if (token && socket && socket.connected) {
+      socket.emit('resumeSession', token);
+    } else {
+      // fallback to localStorage if present (legacy)
+      try {
+        const stored = localStorage.getItem('canteenUser');
+        if (stored) window.currentUser = JSON.parse(stored);
+      } catch (e) {}
     }
   } catch (e) {}
 });
+
+// cookie helpers
+function setCookie(name, value, days) {
+  const expires = new Date(Date.now() + (days||365)*24*60*60*1000).toUTCString();
+  document.cookie = `${name}=${value}; expires=${expires}; path=/`;
+}
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return m ? m[2] : null;
+}
 
 function loginAsAdmin() {
   document.getElementById("login").style.display = "none";
