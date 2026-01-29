@@ -48,11 +48,29 @@ self.addEventListener('message', event => {
 });
 
 self.addEventListener('fetch', event => {
+  const req = event.request;
+  // Network-first for navigation/HTML requests to ensure app updates
+  if (req.mode === 'navigate' || (req.headers.get && req.headers.get('accept') && req.headers.get('accept').includes('text/html'))) {
+    event.respondWith(
+      fetch(req)
+        .then(res => {
+          const resClone = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(req, resClone));
+          return res;
+        })
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Cache-first for other assets (styles, scripts, images)
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      })
+    caches.match(req).then(response => {
+      return response || fetch(req).then(res => {
+        const resClone = res.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(req, resClone));
+        return res;
+      }).catch(() => response);
+    })
   );
 });
