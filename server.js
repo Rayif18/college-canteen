@@ -1,55 +1,135 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
 const PORT = process.env.PORT || 3000;
+const DATA_FILE = path.join(__dirname, 'data.json');
 
-// In-memory menu storage
-let menu = [
-  { id: 1, name: "Samosa", price: 15, orders: 0 },
-  { id: 2, name: "Veg Puff", price: 25, orders: 0 },
-  { id: 3, name: "Cold Drink", price: 30, orders: 0 }
-];
-let nextId = 4;
+// Default data
+let data = {
+  nextOrderId: 1,
+  users: [],
+  orders: [],
+  menu: [
+    { id: 1, name: 'Samosa', price: 15, orders: 0 },
+    { id: 2, name: 'Veg Puff', price: 25, orders: 0 },
+    { id: 3, name: 'Cold Drink', price: 30, orders: 0 }
+  ]
+};
+
+function loadData() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const raw = fs.readFileSync(DATA_FILE, 'utf8');
+      data = JSON.parse(raw);
+      console.log('Loaded data from', DATA_FILE);
+    } else {
+      saveData();
+    }
+  } catch (err) {
+    console.error('Error loading data:', err);
+  }
+}
+
+function saveData() {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Error saving data:', err);
+  }
+}
+
+loadData();
 
 app.use(express.static('.'));
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
-  // Send current menu to new client
-  socket.emit('menuUpdate', menu);
+  // Send current menu and orders to new client
+  socket.emit('menuUpdate', data.menu);
+  socket.emit('ordersUpdate', data.orders);
 
-  // Handle place order
-  socket.on('placeOrder', (orderData) => {
-    console.log('Received placeOrder:', orderData);
-    for (const { id, qty } of orderData) {
-      const item = menu.find(item => item.id === parseInt(id));
-      if (item) {
-        item.orders += qty;
-      }
+  // Register user login (stores user if new)
+  socket.on('userLogin', (user) => {
+    if (!user || !user.email) return;
+    const exists = data.users.find(u => u.email === user.email.toLowerCase());
+    if (!exists) {
+      data.users.push({ name: user.name, email: user.email.toLowerCase() });
+      saveData();
     }
-    console.log('Updated menu:', menu);
-    io.emit('menuUpdate', menu);
+    console.log('User logged in:', user.email);
+  });
+
+  socket.on('requestUserHistory', (email) => {
+    if (!email) return;
+    const history = data.orders.filter(o => (o.user && o.user.email === email.toLowerCase()));
+    socket.emit('userHistory', history);
+  });
+
+  // Handle place order with user info
+  socket.on('placeOrder', (payload) => {
+    // payload expected: { items: [{id,qty}], user: {name,email}, total }
+    try {
+      const { items, user } = payload || {};
+      if (!items || !Array.isArray(items) || !user) return;
+
+      // Build order details with prices
+      let total = 0;
+      const itemDetails = items.map(it => {
+        const menuItem = data.menu.find(m => m.id === parseInt(it.id));
+        const qty = Number(it.qty) || 0;
+        const price = menuItem ? menuItem.price : 0;
+        if (menuItem) menuItem.orders += qty;
+        total += price * qty;
+        return { id: parseInt(it.id), name: menuItem ? menuItem.name : 'Unknown', price, qty };
+      });
+
+      const order = {
+        orderId: data.nextOrderId++,
+        user: { name: user.name, email: user.email.toLowerCase() },
+        items: itemDetails,
+        total,
+        timestamp: new Date().toISOString()
+      };
+
+      data.orders.push(order);
+      saveData();
+
+      // Notify ordering client with receipt
+      socket.emit('orderConfirmed', order);
+
+      // Broadcast updates
+      io.emit('menuUpdate', data.menu);
+      io.emit('ordersUpdate', data.orders);
+      console.log('Order placed:', order.orderId);
+    } catch (err) {
+      console.error('Error processing order:', err);
+    }
   });
 
   // Handle add item
   socket.on('addItem', (item) => {
     console.log('Received addItem:', item);
-    const newItem = { id: nextId++, ...item };
-    menu.push(newItem);
-    io.emit('menuUpdate', menu);
+    const newId = data.menu.reduce((max, it) => Math.max(max, it.id), 0) + 1;
+    const newItem = { id: newId, name: item.name, price: Number(item.price), orders: 0 };
+    data.menu.push(newItem);
+    saveData();
+    io.emit('menuUpdate', data.menu);
   });
 
   // Handle remove item
   socket.on('removeItem', (id) => {
     console.log('Received removeItem:', id);
-    menu = menu.filter(item => item.id !== parseInt(id));
-    io.emit('menuUpdate', menu);
+    data.menu = data.menu.filter(item => item.id !== parseInt(id));
+    saveData();
+    io.emit('menuUpdate', data.menu);
   });
 
   socket.on('disconnect', () => {

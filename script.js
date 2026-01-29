@@ -19,7 +19,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (document.getElementById("adminPanel").style.display !== "none") {
       loadAdminMenu();
+      // update admin orders view if present
+      if (typeof loadAdminOrders === 'function') loadAdminOrders();
     }
+  });
+
+  socket.on('ordersUpdate', (orders) => {
+    console.log('Orders updated:', orders);
+    window.allOrders = orders;
+    // update admin orders list if admin panel shown
+    if (document.getElementById('adminPanel').style.display !== 'none') {
+      loadAdminOrders();
+    }
+    // if current user, request history update
+    if (window.currentUser && window.currentUser.email) {
+      socket.emit('requestUserHistory', window.currentUser.email);
+    }
+  });
+
+  socket.on('orderConfirmed', (order) => {
+    console.log('Order confirmed:', order);
+    showNotification(`Order confirmed (#${order.orderId})`);
+    // show a basic receipt
+    showReceipt(order);
+    // request updated history
+    if (window.currentUser && window.currentUser.email) {
+      socket.emit('requestUserHistory', window.currentUser.email);
+    }
+  });
+
+  socket.on('userHistory', (history) => {
+    console.log('User history received:', history);
+    window.userHistory = history;
+    renderUserHistory();
   });
 
   socket.on('disconnect', () => {
@@ -30,9 +62,42 @@ document.addEventListener('DOMContentLoaded', () => {
 /* Login Functions */
 function loginAsUser() {
   document.getElementById("login").style.display = "none";
-  document.getElementById("userSection").style.display = "block";
-  loadMenu();
+  document.getElementById("userLoginSection").style.display = "block";
 }
+
+function submitUserLogin() {
+  const name = document.getElementById('userName').value.trim();
+  const email = document.getElementById('userEmail').value.trim().toLowerCase();
+  if (!name || !email) {
+    showNotification('Enter name and email', 'error');
+    return;
+  }
+
+  const user = { name, email };
+  // Save locally for future reference
+  localStorage.setItem('canteenUser', JSON.stringify(user));
+  window.currentUser = user;
+
+  // Notify server about user (for history tracking)
+  if (socket && socket.connected) socket.emit('userLogin', user);
+
+  // Show menu
+  document.getElementById('userLoginSection').style.display = 'none';
+  document.getElementById('userSection').style.display = 'block';
+  loadMenu();
+  // Request order history for this user
+  if (socket && socket.connected) socket.emit('requestUserHistory', user.email);
+}
+
+// Restore stored user on load
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const stored = localStorage.getItem('canteenUser');
+    if (stored) {
+      window.currentUser = JSON.parse(stored);
+    }
+  } catch (e) {}
+});
 
 function loginAsAdmin() {
   document.getElementById("login").style.display = "none";
@@ -82,7 +147,7 @@ function loadMenu() {
           <h4>${item.name}</h4>
           <p>₹${item.price}</p>
         </div>
-        <input type="number" min="0" value="0" onchange="calculateTotal()" placeholder="Qty">
+        <input type="number" min="0" value="0" oninput="calculateTotal()" placeholder="Qty">
       </div>`;
   });
 }
@@ -96,17 +161,15 @@ function calculateTotal() {
 }
 
 function placeOrder() {
-  const orderData = [];
-  document.querySelectorAll(".menu-item").forEach(item => {
+  const orderItems = [];
+  document.querySelectorAll('.menu-item').forEach(item => {
     const id = item.dataset.id;
-    const qty = Number(item.querySelector('input').value);
-    if (qty > 0) {
-      orderData.push({ id, qty });
-    }
+    const qty = Number(item.querySelector('input').value) || 0;
+    if (qty > 0) orderItems.push({ id, qty });
   });
 
-  if (orderData.length === 0) {
-    showNotification("Please select at least one item.", 'error');
+  if (orderItems.length === 0) {
+    showNotification('Please select at least one item.', 'error');
     return;
   }
 
@@ -114,17 +177,23 @@ function placeOrder() {
   button.disabled = true;
   button.textContent = 'Placing Order...';
 
-  console.log('Emitting placeOrder:', orderData);
-  socket.emit('placeOrder', orderData);
+  // Build payload including user info
+  const user = window.currentUser || JSON.parse(localStorage.getItem('canteenUser') || 'null');
+  if (!user) {
+    showNotification('Please login with name and email first.', 'error');
+    button.disabled = false;
+    button.textContent = 'Place Order 🛒';
+    return;
+  }
+
+  const payload = { items: orderItems, user };
+  console.log('Emitting placeOrder payload:', payload);
+  socket.emit('placeOrder', payload);
 
   setTimeout(() => {
     button.disabled = false;
     button.textContent = 'Place Order 🛒';
-    showNotification('Order placed successfully!');
-
-    // Reset inputs after showing success message
-    document.querySelectorAll(".menu-item input").forEach(input => input.value = 0);
-    calculateTotal();
+    // do not immediately clear inputs - wait for orderConfirmed to reset after receipt shown
   }, 1000);
 }
 
@@ -163,6 +232,83 @@ function loadAdminMenu() {
         <button onclick="removeItem('${item.id}')">Remove</button>
       </li>`;
   });
+}
+
+function loadAdminOrders() {
+  const containerId = 'adminOrders';
+  let container = document.getElementById(containerId);
+  if (!container) {
+    // create container below adminMenu
+    container = document.createElement('div');
+    container.id = containerId;
+    container.style.marginTop = '20px';
+    document.getElementById('adminPanel').appendChild(container);
+  }
+  const orders = window.allOrders || [];
+  if (orders.length === 0) {
+    container.innerHTML = '<h3>No orders yet</h3>';
+    return;
+  }
+  container.innerHTML = '<h3>All Orders</h3>' + orders.map(o => {
+    const items = o.items.map(it => `${it.qty} x ${it.name} (₹${it.price})`).join('<br>');
+    return `
+      <div class="card" style="padding:10px;margin-bottom:10px;">
+        <strong>Order #${o.orderId}</strong> — ${new Date(o.timestamp).toLocaleString()}<br>
+        <strong>${o.user.name}</strong> &lt;${o.user.email}&gt;<br>
+        ${items}<br>
+        <strong>Total: ₹${o.total}</strong>
+      </div>`;
+  }).join('');
+}
+
+function renderUserHistory() {
+  const hist = window.userHistory || [];
+  let container = document.getElementById('userHistory');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'userHistory';
+    container.style.marginTop = '20px';
+    document.getElementById('userSection').appendChild(container);
+  }
+  if (hist.length === 0) {
+    container.innerHTML = '<h3>Your Orders</h3><p>No previous orders.</p>';
+    return;
+  }
+  container.innerHTML = '<h3>Your Orders</h3>' + hist.map(o => {
+    const items = o.items.map(it => `${it.qty} x ${it.name} (₹${it.price})`).join('<br>');
+    return `
+      <div class="card" style="padding:10px;margin-bottom:10px;">
+        <strong>Order #${o.orderId}</strong> — ${new Date(o.timestamp).toLocaleString()}<br>
+        ${items}<br>
+        <strong>Total: ₹${o.total}</strong>
+      </div>`;
+  }).join('');
+}
+
+function showReceipt(order) {
+  // simple popup-style receipt
+  const receipt = document.createElement('div');
+  receipt.className = 'card';
+  receipt.style.position = 'fixed';
+  receipt.style.left = '50%';
+  receipt.style.top = '10%';
+  receipt.style.transform = 'translateX(-50%)';
+  receipt.style.zIndex = 2000;
+  receipt.style.maxWidth = '600px';
+  receipt.innerHTML = `
+    <h3>Receipt — Order #${order.orderId}</h3>
+    <p><strong>${order.user.name}</strong> &lt;${order.user.email}&gt;</p>
+    <div>${order.items.map(it => `<div>${it.qty} x ${it.name} — ₹${it.price} each</div>`).join('')}</div>
+    <h4>Total: ₹${order.total}</h4>
+    <button class="btn btn-primary" id="closeReceipt">Close</button>
+  `;
+  document.body.appendChild(receipt);
+  document.getElementById('closeReceipt').onclick = () => {
+    receipt.remove();
+    // clear inputs and refresh menu after receipt
+    document.querySelectorAll('.menu-item input').forEach(i => i.value = 0);
+    calculateTotal();
+  };
 }
 
 /* PWA */

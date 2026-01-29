@@ -1,0 +1,10 @@
+{
+  "nextOrderId": 1,
+  "users": [],
+  "orders": [],
+  "menu": [
+    { "id": 1, "name": "Samosa", "price": 15, "orders": 0 },
+    { "id": 2, "name": "Veg Puff", "price": 25, "orders": 0 },
+    { "id": 3, "name": "Cold Drink", "price": 30, "orders": 0 }
+  ]
+}

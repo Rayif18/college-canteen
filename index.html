@@ -50,6 +50,18 @@
   </div>
 </section>
 
+<!-- User Login (name + email) -->
+<section id="userLoginSection" class="card" style="display:none;">
+  <h2>User Login</h2>
+  <div class="form-row">
+    <input type="text" id="userName" placeholder="Your name" class="input-field">
+    <input type="email" id="userEmail" placeholder="Your email" class="input-field">
+    <button class="btn btn-primary" onclick="submitUserLogin()">Continue</button>
+    <button class="btn btn-secondary" onclick="logout()">Cancel</button>
+  </div>
+  <p style="margin-top:10px;font-size:0.9rem;color:#666;">Your name and email will be saved locally for order history and receipts.</p>
+</section>
+
 <!-- Admin Panel -->
 <section id="adminPanel" class="card" style="display:none;">
   <h2>👨‍🍳 Admin Dashboard</h2>
