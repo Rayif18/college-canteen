@@ -94,14 +94,17 @@ function submitUserLogin() {
     return;
   }
   
-  // Validate email format (proper regex)
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Validate email format (strict RFC5322-like pattern)
+  // Must have: text@domain.extension (e.g., user@gmail.com)
+  const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  
   if (!email) {
     showNotification('Please enter your email', 'error');
     return;
   }
+  
   if (!emailRegex.test(email)) {
-    showNotification('Please enter a valid email address (e.g., user@example.com)', 'error');
+    showNotification('Please enter a valid email address (e.g., user@gmail.com)', 'error');
     return;
   }
 
