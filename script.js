@@ -404,6 +404,10 @@ function loadAdminOrders() {
         <div style="margin-top:10px;font-size:1.1em;font-weight:bold;">
           Total: ₹${order.total}
         </div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button class="btn btn-primary btn-small" onclick="showAdminReceipt(${order.orderId})">📄 Receipt</button>
+          <button class="btn btn-success btn-small" onclick="printAdminReceipt(${order.orderId})">🖨️ Print</button>
+        </div>
       </div>`;
   });
   console.log('💾 Rendering HTML to container');
@@ -566,7 +570,44 @@ function printAdminReceipt(orderId) {
 }
 
 function updateStatistics() {
-  // Placeholder - statistics tab not used in this version
+  const orders = window.allOrders || [];
+  
+  if (!orders || orders.length === 0) {
+    document.getElementById('totalOrders').textContent = '0';
+    document.getElementById('totalRevenue').textContent = '₹0';
+    document.getElementById('avgOrder').textContent = '₹0';
+    document.getElementById('popularItem').textContent = '-';
+    document.getElementById('topItems').innerHTML = '<p>No orders yet</p>';
+    return;
+  }
+  
+  const totalOrders = orders.length;
+  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+  const avgOrder = Math.round(totalRevenue / totalOrders);
+  
+  const itemCounts = {};
+  orders.forEach(o => {
+    o.items.forEach(it => {
+      itemCounts[it.name] = (itemCounts[it.name] || 0) + it.qty;
+    });
+  });
+  
+  const popularItem = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0];
+  
+  document.getElementById('totalOrders').textContent = totalOrders;
+  document.getElementById('totalRevenue').textContent = '₹' + totalRevenue;
+  document.getElementById('avgOrder').textContent = '₹' + avgOrder;
+  document.getElementById('popularItem').textContent = popularItem ? popularItem[0] : '-';
+  
+  let topItemsHtml = '';
+  Object.entries(itemCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .forEach(([name, count]) => {
+      topItemsHtml += `<div class="top-item" style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #eee;"><span>${name}</span><span style="font-weight:bold;">${count} orders</span></div>`;
+    });
+  
+  document.getElementById('topItems').innerHTML = topItemsHtml || '<p>No data</p>';
 }
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js")
