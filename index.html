@@ -36,7 +36,7 @@
 <section id="adminPassSection" class="card" style="display:none;">
   <h2>Admin Access</h2>
   <div class="form-group">
-    <input type="password" id="adminPass" placeholder="Enter Admin Password" class="input-field">
+    <input type="password" id="adminPass" placeholder="Enter Admin Password" class="input-field" autocomplete="current-password">
   </div>
   <button class="btn btn-primary" onclick="adminLogin()">Login</button>
 </section>
@@ -62,8 +62,8 @@
 <section id="userLoginSection" class="card" style="display:none;">
   <h2>User Login</h2>
   <div class="form-row">
-    <input type="text" id="userName" placeholder="Your name" class="input-field" maxlength="50">
-    <input type="email" id="userEmail" placeholder="Your email (e.g., user@example.com)" class="input-field" maxlength="100">
+    <input type="text" id="userName" placeholder="Your name" class="input-field" maxlength="50" autocomplete="name">
+    <input type="email" id="userEmail" placeholder="Your email (e.g., user@example.com)" class="input-field" maxlength="100" autocomplete="email">
     <button class="btn btn-primary" onclick="submitUserLogin()">Continue</button>
     <button class="btn btn-secondary" onclick="logout()">Cancel</button>
   </div>
@@ -89,8 +89,8 @@
     <h3>Add New Item</h3>
     <div class="admin-form">
       <div class="form-row">
-        <input type="text" id="itemName" placeholder="Item Name" class="input-field">
-        <input type="number" id="itemPrice" placeholder="Price (₹)" class="input-field" min="1">
+        <input type="text" id="itemName" placeholder="Item Name" class="input-field" autocomplete="off">
+        <input type="number" id="itemPrice" placeholder="Price (₹)" class="input-field" min="1" autocomplete="off">
         <button class="btn btn-success" onclick="addItem()">➕ Add Item</button>
       </div>
     </div>
