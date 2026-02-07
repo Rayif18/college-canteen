@@ -1,4 +1,4 @@
-const CACHE_NAME = 'canteen-v3';
+const CACHE_NAME = 'canteen-v4';
 const urlsToCache = [
   '/',
   '/index.html',
