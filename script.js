@@ -25,26 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   socket.on('ordersUpdate', (orders) => {
-    console.log('Orders updated:', orders);
-    console.log('Setting window.allOrders, length =', orders.length);
+    console.log('📦 ORDERS RECEIVED FROM SERVER:', orders);
     window.allOrders = orders;
-    
-    // Try to update admin view if it's open and the function exists
-    if (document.getElementById('adminPanel') && document.getElementById('adminPanel').style.display !== 'none') {
-      try { 
-        console.log('Admin panel is open, updating orders display');
-        loadAdminOrders(); 
-      } catch (e) { 
-        console.error('Error in loadAdminOrders from ordersUpdate:', e); 
-      }
-    } else {
-      console.log('Admin panel is closed, skipping loadAdminOrders');
-    }
-    
-    // if current user, request history update
-    if (window.currentUser && window.currentUser.email) {
-      socket.emit('requestUserHistory', window.currentUser.email);
-    }
+    console.log('✅ window.allOrders set to:', window.allOrders);
   });
 
   socket.on('orderConfirmed', (order) => {
@@ -357,11 +340,11 @@ function switchAdminTab(tabName) {
     
     // Load data for the tab
     if (tabName === 'orders') {
-      console.log('Loading admin orders...');
-      setTimeout(() => loadAdminOrders(), 100);
+      console.log('📦 Orders tab clicked - loading orders');
+      loadAdminOrders();
     } else if (tabName === 'stats') {
-      console.log('Loading statistics...');
-      setTimeout(() => updateStatistics(), 100);
+      console.log('📊 Stats tab clicked');
+      updateStatistics();
     }
   } catch (e) {
     console.error('Error in switchAdminTab:', e);
@@ -384,20 +367,30 @@ function loadAdminMenu() {
 }
 
 function loadAdminOrders() {
+  console.log('🔄 loadAdminOrders CALLED');
+  console.log('📊 window.allOrders =', window.allOrders);
+  
   const container = document.getElementById('adminOrders');
+  console.log('📌 container element =', container);
+  
   if (!container) {
-    console.error('adminOrders container not found!');
+    console.error('❌ adminOrders container NOT FOUND!');
     return;
   }
   
   const orders = window.allOrders;
+  console.log('📋 orders data =', orders);
+  
   if (!orders || orders.length === 0) {
+    console.log('⚠️ No orders to display');
     container.innerHTML = '<p style="text-align:center;color:#999;">No orders yet</p>';
     return;
   }
   
+  console.log('✅ Processing ' + orders.length + ' orders');
   let html = '';
-  orders.forEach(order => {
+  orders.forEach((order, idx) => {
+    console.log('  Order ' + idx + ':', order);
     const itemsList = order.items.map(it => `${it.qty}x ${it.name} (₹${it.price})`).join(', ');
     const orderDate = new Date(order.timestamp).toLocaleString();
     html += `
@@ -418,7 +411,9 @@ function loadAdminOrders() {
         </div>
       </div>`;
   });
+  console.log('💾 Rendering HTML to container');
   container.innerHTML = html;
+  console.log('✅ Orders rendered successfully');
 }
 
 function renderUserHistory() {
