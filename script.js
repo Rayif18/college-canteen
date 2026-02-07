@@ -37,9 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   socket.on('orderConfirmed', (order) => {
     console.log('Order confirmed:', order);
-    showNotification(`Order confirmed (#${order.orderId})`);
-    // show a basic receipt
-    showReceipt(order);
+    showNotification(`✅ Order placed successfully! (#${order.orderId})`);
+    // Clear the menu items after successful order
+    document.querySelectorAll('.menu-item input').forEach(i => i.value = 0);
+    calculateTotal();
     // request updated history
     if (window.currentUser && window.currentUser.email) {
       socket.emit('requestUserHistory', window.currentUser.email);
@@ -305,7 +306,11 @@ function loadAdminOrders() {
         <strong>Order #${o.orderId}</strong> — ${new Date(o.timestamp).toLocaleString()}<br>
         <strong>${o.user.name}</strong> &lt;${o.user.email}&gt;<br>
         ${items}<br>
-        <strong>Total: ₹${o.total}</strong>
+        <strong>Total: ₹${o.total}</strong><br>
+        <div style="margin-top:8px;">
+          <button class="btn btn-small" onclick="showAdminReceipt(${o.orderId})">📄 View Receipt</button>
+          <button class="btn btn-small" onclick="printAdminReceipt(${o.orderId})">🖨️ Print</button>
+        </div>
       </div>`;
   }).join('');
 }
@@ -334,48 +339,135 @@ function renderUserHistory() {
   }).join('');
 }
 
-function showReceipt(order) {
-  // simple popup-style receipt
-  const receipt = document.createElement('div');
-  receipt.className = 'card';
-  receipt.style.position = 'fixed';
-  receipt.style.left = '50%';
-  receipt.style.top = '10%';
-  receipt.style.transform = 'translateX(-50%)';
-  receipt.style.zIndex = 2000;
-  receipt.style.maxWidth = '600px';
-  receipt.innerHTML = `
-    <h3>Receipt — Order #${order.orderId}</h3>
-    <p><strong>${order.user.name}</strong> &lt;${order.user.email}&gt;</p>
-    <div>${order.items.map(it => `<div>${it.qty} x ${it.name} — ₹${it.price} each</div>`).join('')}</div>
-    <h4>Total: ₹${order.total}</h4>
-    <div style="margin-top:10px">
-      <button class="btn btn-primary" id="printReceipt">Print</button>
-      <button class="btn btn-secondary" id="closeReceipt">Close</button>
+function showAdminReceipt(orderId) {
+  const order = window.allOrders.find(o => o.orderId === orderId);
+  if (!order) {
+    showNotification('Order not found', 'error');
+    return;
+  }
+
+  const modal = document.getElementById('receiptModal');
+  const content = document.getElementById('receiptContent');
+  
+  const items = order.items.map(it => `
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;">
+      <span>${it.qty} x ${it.name}</span>
+      <span>₹${it.price} each (₹${it.qty * it.price})</span>
+    </div>
+  `).join('');
+  
+  content.innerHTML = `
+    <div style="padding:20px;max-width:500px;">
+      <h3 style="text-align:center;margin-bottom:20px;">📄 Receipt</h3>
+      <div style="border:2px solid #333;padding:15px;border-radius:5px;">
+        <h4 style="margin-top:0;text-align:center;">Order #${order.orderId}</h4>
+        <p style="text-align:center;color:#666;margin-bottom:15px;">${new Date(order.timestamp).toLocaleString()}</p>
+        <hr>
+        <p><strong>Customer Name:</strong> ${order.user.name}</p>
+        <p><strong>Email:</strong> ${order.user.email}</p>
+        <hr>
+        <h4>Items:</h4>
+        ${items}
+        <hr>
+        <div style="display:flex;justify-content:space-between;font-size:1.1em;font-weight:bold;margin-top:15px;">
+          <span>Total Amount:</span>
+          <span>₹${order.total}</span>
+        </div>
+        <div style="text-align:center;margin-top:20px;color:#666;font-size:0.9em;">
+          <p>Thank you for your order!</p>
+        </div>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;">
+        <button class="btn btn-primary" onclick="printAdminReceipt(${order.orderId})">🖨️ Print</button>
+        <button class="btn btn-secondary" onclick="closeAdminReceipt()">Close</button>
+      </div>
     </div>
   `;
-  document.body.appendChild(receipt);
-  document.getElementById('closeReceipt').onclick = () => {
-    receipt.remove();
-    // clear inputs and refresh menu after receipt
-    document.querySelectorAll('.menu-item input').forEach(i => i.value = 0);
-    calculateTotal();
-  };
-  document.getElementById('printReceipt').onclick = () => {
-    printReceiptContent(receipt.innerHTML);
-  };
+  
+  modal.style.display = 'flex';
 }
 
-function printReceiptContent(html) {
+function closeAdminReceipt() {
+  document.getElementById('receiptModal').style.display = 'none';
+}
+
+function printAdminReceipt(orderId) {
+  const order = window.allOrders.find(o => o.orderId === orderId);
+  if (!order) {
+    showNotification('Order not found', 'error');
+    return;
+  }
+  
+  const items = order.items.map(it => `
+    <tr>
+      <td>${it.qty}</td>
+      <td>${it.name}</td>
+      <td>₹${it.price}</td>
+      <td>₹${it.qty * it.price}</td>
+    </tr>
+  `).join('');
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Receipt - Order #${order.orderId}</title>
+      <style>
+        * { margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .receipt { max-width: 500px; margin: 0 auto; border: 2px solid #000; padding: 20px; }
+        h2 { text-align: center; margin-bottom: 10px; }
+        .order-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .details { margin: 15px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th { border-bottom: 2px solid #000; padding: 8px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #ddd; }
+        .total { font-size: 18px; font-weight: bold; text-align: right; margin-top: 15px; border-top: 2px solid #000; padding-top: 10px; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+        @media print { body { margin: 0; padding: 0; } }
+      </style>
+    </head>
+    <body>
+      <div class="receipt">
+        <h2>RECEIPT</h2>
+        <div class="order-header">
+          <div><strong>Order #${order.orderId}</strong></div>
+          <div>${new Date(order.timestamp).toLocaleString()}</div>
+        </div>
+        <div class="details">
+          <p><strong>Customer:</strong> ${order.user.name}</p>
+          <p><strong>Email:</strong> ${order.user.email}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Qty</th>
+              <th>Item</th>
+              <th>Price</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items}
+          </tbody>
+        </table>
+        <div class="total">
+          Total Amount: ₹${order.total}
+        </div>
+        <div class="footer">
+          <p>Thank you for your order!</p>
+          <p>College Mini Canteen</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
   const w = window.open('', '_blank');
-  w.document.write('<html><head><title>Receipt</title>');
-  w.document.write('<link rel="stylesheet" href="style.css">');
-  w.document.write('</head><body>');
   w.document.write(html);
-  w.document.write('</body></html>');
   w.document.close();
   w.focus();
-  setTimeout(() => { w.print(); w.close(); }, 500);
+  setTimeout(() => { w.print(); }, 500);
 }
 
 /* PWA */

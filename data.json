@@ -1,10 +1,49 @@
 {
-  "nextOrderId": 1,
-  "users": [],
-  "orders": [],
+  "nextOrderId": 2,
+  "users": [
+    {
+      "name": "a",
+      "email": "a@gmail.com",
+      "token": "mlbvhg0du0bik0"
+    }
+  ],
+  "orders": [
+    {
+      "orderId": 1,
+      "user": {
+        "name": "a",
+        "email": "a@gmail.com"
+      },
+      "items": [
+        {
+          "id": 1,
+          "name": "Samosa",
+          "price": 15,
+          "qty": 3
+        }
+      ],
+      "total": 45,
+      "timestamp": "2026-02-07T05:27:33.974Z"
+    }
+  ],
   "menu": [
-    { "id": 1, "name": "Samosa", "price": 15, "orders": 0 },
-    { "id": 2, "name": "Veg Puff", "price": 25, "orders": 0 },
-    { "id": 3, "name": "Cold Drink", "price": 30, "orders": 0 }
+    {
+      "id": 1,
+      "name": "Samosa",
+      "price": 15,
+      "orders": 3
+    },
+    {
+      "id": 2,
+      "name": "Veg Puff",
+      "price": 25,
+      "orders": 0
+    },
+    {
+      "id": 3,
+      "name": "Cold Drink",
+      "price": 30,
+      "orders": 0
+    }
   ]
 }

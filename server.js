@@ -62,8 +62,18 @@ io.on('connection', (socket) => {
     const email = user.email.toLowerCase();
     const exists = data.users.find(u => u.email === email);
     if (!exists) {
-      data.users.push({ name: user.name, email });
+      // create user with token
+      const token = (Date.now().toString(36) + Math.random().toString(36).slice(2,8));
+      data.users.push({ name: user.name, email, token });
       saveData();
+      user.token = token;
+    } else {
+      // ensure user has token
+      if (!exists.token) {
+        exists.token = (Date.now().toString(36) + Math.random().toString(36).slice(2,8));
+        saveData();
+      }
+      user.token = exists.token;
     }
     // Add socket to a room for this user so we can push updates to all their devices
     socket.join(`user:${email}`);
@@ -71,6 +81,18 @@ io.on('connection', (socket) => {
     // Send current history immediately
     const history = data.orders.filter(o => (o.user && o.user.email === email));
     socket.emit('userHistory', history);
+    // send back user data and token for client persistence
+    socket.emit('userLogged', { user: { name: user.name, email }, token: user.token });
+  });
+
+  socket.on('resumeSession', (token) => {
+    if (!token) return;
+    const u = data.users.find(x => x.token === token);
+    if (!u) return;
+    const email = u.email;
+    socket.join(`user:${email}`);
+    const history = data.orders.filter(o => (o.user && o.user.email === email));
+    socket.emit('sessionResumed', { user: { name: u.name, email: u.email }, history });
   });
 
   socket.on('requestUserHistory', (email) => {
