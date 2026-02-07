@@ -142,6 +142,27 @@
   </div>
 </div>
 
+<!-- Order Confirmation Modal -->
+<div id="confirmOrderModal" class="modal" style="display:none;">
+  <div class="confirmation-dialog">
+    <div class="confirmation-header">
+      <h2>🛒 Confirm Your Order</h2>
+    </div>
+    <div class="confirmation-body">
+      <div id="confirmOrderItems"></div>
+      <div class="confirmation-total">
+        <span>Total Amount:</span>
+        <span id="confirmOrderTotal" style="font-size:1.5rem;font-weight:700;color:var(--accent);">₹0</span>
+      </div>
+      <p style="color:var(--muted);font-size:0.9rem;margin-top:15px;text-align:center;">Please review your order before confirming</p>
+    </div>
+    <div class="confirmation-actions">
+      <button class="btn btn-secondary" onclick="cancelOrderConfirmation()">Cancel</button>
+      <button class="btn btn-success" onclick="confirmOrderPlacement()">✅ Confirm Order</button>
+    </div>
+  </div>
+</div>
+
 </main>
 
 <script src="script.js"></script>

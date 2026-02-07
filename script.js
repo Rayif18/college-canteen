@@ -151,6 +151,11 @@ function adminLogin() {
     document.getElementById("adminPassSection").style.display = "none";
     document.getElementById("adminPanel").style.display = "block";
     loadAdminMenu();
+    // Load orders and stats
+    setTimeout(() => {
+      loadAdminOrders();
+      updateStatistics();
+    }, 100);
   } else {
     showNotification("Wrong password", 'error');
   }
@@ -215,11 +220,45 @@ function placeOrder() {
     return;
   }
 
-  const total = document.getElementById('total').innerText;
-  const confirmed = confirm(`📦 Confirm your order?\n\nTotal: ₹${total}\n\nClick OK to proceed.`);
+  // Store order items for confirmation
+  window.pendingOrderItems = orderItems;
   
-  if (!confirmed) {
-    showNotification('Order cancelled', 'error');
+  // Show confirmation modal
+  showOrderConfirmation(orderItems);
+}
+
+function showOrderConfirmation(orderItems) {
+  const itemsHtml = orderItems.map(item => {
+    const menuItem = menu.find(m => m.id === parseInt(item.id));
+    if (!menuItem) return '';
+    const subtotal = menuItem.price * item.qty;
+    return `
+      <div class="confirm-item">
+        <div class="confirm-item-name">${item.qty} × ${menuItem.name}</div>
+        <div class="confirm-item-price">₹${menuItem.price} each = <strong>₹${subtotal}</strong></div>
+      </div>
+    `;
+  }).join('');
+  
+  const total = orderItems.reduce((sum, item) => {
+    const menuItem = menu.find(m => m.id === parseInt(item.id));
+    return sum + (menuItem ? menuItem.price * item.qty : 0);
+  }, 0);
+  
+  document.getElementById('confirmOrderItems').innerHTML = itemsHtml;
+  document.getElementById('confirmOrderTotal').textContent = '₹' + total;
+  document.getElementById('confirmOrderModal').style.display = 'flex';
+}
+
+function cancelOrderConfirmation() {
+  document.getElementById('confirmOrderModal').style.display = 'none';
+  window.pendingOrderItems = null;
+  showNotification('Order cancelled', 'error');
+}
+
+function confirmOrderPlacement() {
+  if (!window.pendingOrderItems || window.pendingOrderItems.length === 0) {
+    showNotification('No items to order', 'error');
     return;
   }
 
@@ -227,18 +266,20 @@ function placeOrder() {
   button.disabled = true;
   button.textContent = '⏳ Placing Order...';
 
-  // Get user from window (set by server on login/resume)
   const user = window.currentUser;
   if (!user || !user.email) {
-    showNotification('Please login with name and email first.', 'error');
+    showNotification('Please login first.', 'error');
     button.disabled = false;
     button.textContent = '🛒 Place Order';
+    document.getElementById('confirmOrderModal').style.display = 'none';
     return;
   }
 
-  const payload = { items: orderItems, user };
-  console.log('Emitting placeOrder payload:', payload);
+  const payload = { items: window.pendingOrderItems, user };
   socket.emit('placeOrder', payload);
+  
+  document.getElementById('confirmOrderModal').style.display = 'none';
+  window.pendingOrderItems = null;
 
   setTimeout(() => {
     button.disabled = false;
@@ -298,9 +339,9 @@ function switchAdminTab(tabName) {
   
   // Load data for the tab
   if (tabName === 'orders') {
-    loadAdminOrders();
+    setTimeout(() => loadAdminOrders(), 100);
   } else if (tabName === 'stats') {
-    updateStatistics();
+    setTimeout(() => updateStatistics(), 100);
   }
 }
 
@@ -320,14 +361,16 @@ function loadAdminMenu() {
 }
 
 function loadAdminOrders() {
-  const containerId = 'adminOrders';
-  let container = document.getElementById(containerId);
+  const ordersTab = document.getElementById('ordersTab');
+  let container = document.getElementById('adminOrders');
+  
   if (!container) {
     container = document.createElement('div');
-    container.id = containerId;
+    container.id = 'adminOrders';
     container.className = 'orders-list';
-    document.getElementById('ordersTab').appendChild(container);
+    ordersTab.appendChild(container);
   }
+  
   const orders = window.allOrders || [];
   const query = (document.getElementById('adminSearch') && document.getElementById('adminSearch').value || '').toLowerCase().trim();
   const filtered = orders.filter(o => {
@@ -339,7 +382,7 @@ function loadAdminOrders() {
   }).sort((a, b) => b.orderId - a.orderId); // Sort by newest first
   
   if (filtered.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);"><p>📭 No orders yet</p></div>';
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><p style="font-size:1.2rem;">📭 No orders yet</p><p>Orders will appear here when customers place them.</p></div>';
     return;
   }
   
