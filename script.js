@@ -314,36 +314,31 @@ function removeItem(id) {
 
 function switchAdminTab(tabName) {
   try {
-    console.log('switchAdminTab called with:', tabName);
+    // Hide ALL tabs - set display:none
+    document.getElementById('menuTab').style.display = 'none';
+    document.getElementById('ordersTab').style.display = 'none';
+    document.getElementById('statsTab').style.display = 'none';
     
-    // Hide all tabs
-    document.getElementById('menuTab').classList.remove('active');
-    document.getElementById('ordersTab').classList.remove('active');
-    document.getElementById('statsTab').classList.remove('active');
-    
-    // Remove active class from all buttons
+    // Remove active class from all tab buttons
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     
-    // Show selected tab
-    const tabElement = document.getElementById(tabName + 'Tab');
-    if (tabElement) {
-      tabElement.classList.add('active');
-      console.log(`Tab ${tabName}Tab is now active`);
-    } else {
-      console.error(`Tab element ${tabName}Tab not found!`);
+    // Show selected tab - set display:block
+    const selectedTab = document.getElementById(tabName + 'Tab');
+    if (selectedTab) {
+      selectedTab.style.display = 'block';
     }
     
-    // Add active class to clicked button (if event exists)
+    // Add active class to clicked button
     if (event && event.target) {
       event.target.classList.add('active');
     }
     
     // Load data for the tab
     if (tabName === 'orders') {
-      console.log('📦 Orders tab clicked - loading orders');
+      console.log('📦 Loading orders');
       loadAdminOrders();
     } else if (tabName === 'stats') {
-      console.log('📊 Stats tab clicked');
+      console.log('📊 Loading stats');
       updateStatistics();
     }
   } catch (e) {
