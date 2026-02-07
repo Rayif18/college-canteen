@@ -562,11 +562,19 @@ function printAdminReceipt(orderId) {
           <p>College Mini Canteen</p>
         </div>
       </div>
+      <script>
+        window.onload = function() {
+          window.print();
+          setTimeout(() => window.close(), 500);
+        };
+      </script>
     </body>
     </html>
   `;
   
-  setTimeout(() => { w.print(); }, 500);
+  const printWindow = window.open('', '', 'height=500,width=800');
+  printWindow.document.write(html);
+  printWindow.document.close();
 }
 
 function updateStatistics() {
