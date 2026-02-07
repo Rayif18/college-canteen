@@ -101,6 +101,14 @@ io.on('connection', (socket) => {
     socket.emit('userHistory', history);
   });
 
+  // Handle getOrders request from admin
+  socket.on('getOrders', (payload, callback) => {
+    console.log('Admin requested orders');
+    if (callback && typeof callback === 'function') {
+      callback(data.orders);
+    }
+  });
+
   // Handle place order with user info
   socket.on('placeOrder', (payload) => {
     // payload expected: { items: [{id,qty}], user: {name,email}, total }

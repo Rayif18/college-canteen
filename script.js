@@ -163,13 +163,14 @@ function adminLogin() {
     document.getElementById("adminPassSection").style.display = "none";
     document.getElementById("adminPanel").style.display = "block";
     loadAdminMenu();
-    // Load orders and stats
-    console.log('adminLogin: window.allOrders =', window.allOrders);
-    setTimeout(() => {
-      console.log('adminLogin timeout: window.allOrders =', window.allOrders);
+    
+    // Request fresh orders data from server
+    socket.emit('getOrders', {}, (orders) => {
+      console.log('Received orders from server:', orders);
+      window.allOrders = orders;
       loadAdminOrders();
       updateStatistics();
-    }, 100);
+    });
   } else {
     showNotification("Wrong password", 'error');
   }
