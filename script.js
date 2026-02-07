@@ -164,13 +164,13 @@ function adminLogin() {
     document.getElementById("adminPanel").style.display = "block";
     loadAdminMenu();
     
-    // Request fresh orders data from server
-    socket.emit('getOrders', {}, (orders) => {
-      console.log('Received orders from server:', orders);
-      window.allOrders = orders;
+    // Immediately load and display orders from window.allOrders
+    // If it's already set from Socket.io, use it
+    // If not, it will be set when ordersUpdate event fires
+    setTimeout(() => {
       loadAdminOrders();
       updateStatistics();
-    });
+    }, 50);
   } else {
     showNotification("Wrong password", 'error');
   }
@@ -392,79 +392,40 @@ function loadAdminMenu() {
 }
 
 function loadAdminOrders() {
-  try {
-    console.log('loadAdminOrders called');
-    
-    // Make sure window.allOrders exists
-    if (!window.allOrders) {
-      console.log('window.allOrders is undefined, initializing as empty array');
-      window.allOrders = [];
-    }
-    
-    const ordersTab = document.getElementById('ordersTab');
-    const container = document.getElementById('adminOrders');
-    
-    if (!container) {
-      console.error('adminOrders container not found in DOM!');
-      return;
-    }
-    
-    const orders = window.allOrders;
-    console.log(`Found ${orders.length} orders in window.allOrders`);
-    
-    const query = (document.getElementById('adminSearch') && document.getElementById('adminSearch').value || '').toLowerCase().trim();
-    
-    const filtered = orders.filter(o => {
-      if (!query) return true;
-      if ((o.orderId + '').includes(query)) return true;
-      if ((o.user && o.user.name && o.user.name.toLowerCase().includes(query)) || (o.user && o.user.email && o.user.email.toLowerCase().includes(query))) return true;
-      if (o.items && o.items.some(it => it.name.toLowerCase().includes(query))) return true;
-      return false;
-    }).sort((a, b) => b.orderId - a.orderId);
-    
-    console.log(`After filtering: ${filtered.length} orders`);
-    
-    if (filtered.length === 0) {
-      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><p style="font-size:1.2rem;">📭 No orders yet</p><p>Orders will appear here when customers place them.</p></div>';
-      console.log('No orders to display');
-      return;
-    }
-    
-    const html = filtered.map(o => {
-      const items = o.items.map(it => `${it.qty}x ${it.name} (₹${it.price})`).join(', ');
-      const timestamp = new Date(o.timestamp);
-      const timeStr = timestamp.toLocaleString();
-      return `
-        <div class="order-card">
-          <div class="order-header">
-            <div>
-              <span class="order-id">Order #${o.orderId}</span>
-              <span class="order-status pending" style="margin-left:10px;">PENDING</span>
-            </div>
-            <span class="order-time">${timeStr}</span>
-          </div>
-          <div class="order-customer">
-            <strong>👤 ${o.user.name}</strong>
-            <span class="email">📧 ${o.user.email}</span>
-          </div>
-          <div class="order-items">
-            <strong>Items:</strong> ${items}
-          </div>
-          <div class="order-total">
-            💰 Total: ₹${o.total}
-          </div>
-          <div class="order-actions">
-            <button class="btn btn-primary btn-small" onclick="showAdminReceipt(${o.orderId})">📄 View Receipt</button>
-            <button class="btn btn-success btn-small" onclick="printAdminReceipt(${o.orderId})">🖨️ Print</button>
-          </div>
-        </div>`;
-    }).join('');
-    
-    container.innerHTML = html;
-    console.log('Orders rendered successfully');
-  } catch (e) {
-    console.error('Error in loadAdminOrders:', e);
+  const container = document.getElementById('adminOrders');
+  if (!container) return;
+  
+  const orders = window.allOrders || [];
+  if (!orders || orders.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;"><p>No orders yet</p></div>';
+    return;
   }
+  
+  let html = '';
+  for (let order of orders) {
+    const items = order.items.map(it => `${it.qty}x ${it.name}`).join(', ');
+    const date = new Date(order.timestamp).toLocaleString();
+    html += `
+      <div class="order-card">
+        <div class="order-header">
+          <span class="order-id">Order #${order.orderId}</span>
+          <span class="order-time">${date}</span>
+        </div>
+        <div class="order-customer">
+          <strong>${order.user.name}</strong> (${order.user.email})
+        </div>
+        <div class="order-items">
+          Items: ${items}
+        </div>
+        <div class="order-total">
+          Total: ₹${order.total}
+        </div>
+        <div class="order-actions">
+          <button class="btn btn-primary btn-small" onclick="showAdminReceipt(${order.orderId})">View Receipt</button>
+        </div>
+      </div>`;
+  }
+  container.innerHTML = html;
 }
 
 function renderUserHistory() {
@@ -622,67 +583,44 @@ function printAdminReceipt(orderId) {
 }
 
 function updateStatistics() {
-  try {
-    console.log('updateStatistics called');
-    
-    // Make sure window.allOrders exists
-    if (!window.allOrders) {
-      console.log('window.allOrders is undefined, initializing as empty array');
-      window.allOrders = [];
-    }
-    
-    const orders = window.allOrders;
-    console.log(`Found ${orders.length} orders for statistics`);
-    
-    if (orders.length === 0) {
-      document.getElementById('statsGrid').innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
-          <p style="color: var(--muted); font-size: 1.1rem;">📊 No orders yet. Statistics will appear here once orders are placed.</p>
-        </div>
-      `;
-      return;
-    }
-    
-    // Calculate statistics
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-    const avgOrder = Math.round(totalRevenue / totalOrders);
-    
-    // Find most popular item
-    const itemCounts = {};
-    orders.forEach(o => {
-      o.items.forEach(it => {
-        itemCounts[it.name] = (itemCounts[it.name] || 0) + it.qty;
-      });
-    });
-    
-    const popularItem = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0];
-    const popularItemName = popularItem ? popularItem[0] : '-';
-    
-    console.log(`Total Orders: ${totalOrders}, Total Revenue: ₹${totalRevenue}, Popular Item: ${popularItemName}`);
-    
-    // Update stat cards
-    document.getElementById('totalOrders').textContent = totalOrders;
-    document.getElementById('totalRevenue').textContent = '₹' + totalRevenue;
-    document.getElementById('avgOrder').textContent = '₹' + avgOrder;
-    document.getElementById('popularItem').textContent = popularItemName;
-    
-    // Update top items list
-    const topItems = Object.entries(itemCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, count]) => `
-        <div class="top-item">
-          <span class="top-item-name">🍔 ${name}</span>
-          <span class="top-item-count">${count} orders</span>
-        </div>
-      `).join('');
-    
-    document.getElementById('topItems').innerHTML = topItems || '<p style="color: var(--muted);">No item data available</p>';
-    console.log('Statistics updated successfully');
-  } catch (e) {
-    console.error('Error in updateStatistics:', e);
+  const orders = window.allOrders || [];
+  
+  if (!orders || orders.length === 0) {
+    document.getElementById('totalOrders').textContent = '0';
+    document.getElementById('totalRevenue').textContent = '₹0';
+    document.getElementById('avgOrder').textContent = '₹0';
+    document.getElementById('popularItem').textContent = '-';
+    document.getElementById('topItems').innerHTML = '<p>No orders yet</p>';
+    return;
   }
+  
+  const totalOrders = orders.length;
+  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+  const avgOrder = Math.round(totalRevenue / totalOrders);
+  
+  const itemCounts = {};
+  orders.forEach(o => {
+    o.items.forEach(it => {
+      itemCounts[it.name] = (itemCounts[it.name] || 0) + it.qty;
+    });
+  });
+  
+  const popularItem = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0];
+  
+  document.getElementById('totalOrders').textContent = totalOrders;
+  document.getElementById('totalRevenue').textContent = '₹' + totalRevenue;
+  document.getElementById('avgOrder').textContent = '₹' + avgOrder;
+  document.getElementById('popularItem').textContent = popularItem ? popularItem[0] : '-';
+  
+  let topItemsHtml = '';
+  Object.entries(itemCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .forEach(([name, count]) => {
+      topItemsHtml += `<div class="top-item"><span>${name}</span> <span>${count} orders</span></div>`;
+    });
+  
+  document.getElementById('topItems').innerHTML = topItemsHtml || '<p>No data</p>';
 }
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js")
