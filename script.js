@@ -185,11 +185,11 @@ function loadMenu() {
   menu.forEach((item, i) => {
     menuDiv.innerHTML += `
       <div class="menu-item" data-id="${item.id}">
-        <div>
-          <h4>${item.name}</h4>
-          <p>₹${item.price}</p>
+        <div class="meta">
+          <h4>🍔 ${item.name}</h4>
+          <p class="price" style="color:var(--primary);font-weight:600;font-size:1rem;">₹${item.price}</p>
         </div>
-        <input type="number" min="0" value="0" oninput="calculateTotal()" placeholder="Qty">
+        <input type="number" min="0" max="99" value="0" oninput="calculateTotal()" placeholder="Qty" class="qty-input">
       </div>`;
   });
 }
@@ -215,16 +215,24 @@ function placeOrder() {
     return;
   }
 
+  const total = document.getElementById('total').innerText;
+  const confirmed = confirm(`📦 Confirm your order?\n\nTotal: ₹${total}\n\nClick OK to proceed.`);
+  
+  if (!confirmed) {
+    showNotification('Order cancelled', 'error');
+    return;
+  }
+
   const button = document.querySelector('#userSection .btn-success');
   button.disabled = true;
-  button.textContent = 'Placing Order...';
+  button.textContent = '⏳ Placing Order...';
 
   // Get user from window (set by server on login/resume)
   const user = window.currentUser;
   if (!user || !user.email) {
     showNotification('Please login with name and email first.', 'error');
     button.disabled = false;
-    button.textContent = 'Place Order 🛒';
+    button.textContent = '🛒 Place Order';
     return;
   }
 
@@ -234,18 +242,27 @@ function placeOrder() {
 
   setTimeout(() => {
     button.disabled = false;
-    button.textContent = 'Place Order 🛒';
-    // do not immediately clear inputs - wait for orderConfirmed to reset after receipt shown
+    button.textContent = '🛒 Place Order';
   }, 1000);
 }
 
 /* Admin Functions */
 function addItem() {
   const name = document.getElementById("itemName").value.trim();
-  const price = document.getElementById("itemPrice").value;
+  const price = Number(document.getElementById("itemPrice").value);
 
-  if (!name || !price) {
-    showNotification("Enter item details.", 'error');
+  if (!name) {
+    showNotification('Please enter item name.', 'error');
+    return;
+  }
+  
+  if (!price || price <= 0) {
+    showNotification('Please enter a valid price (must be greater than 0).', 'error');
+    return;
+  }
+  
+  if (price > 10000) {
+    showNotification('Price seems too high. Please enter a realistic price.', 'error');
     return;
   }
 
@@ -254,11 +271,37 @@ function addItem() {
 
   document.getElementById("itemName").value = "";
   document.getElementById("itemPrice").value = "";
-  showNotification('Item added successfully!');
+  showNotification(`✅ Item '${name}' added successfully!`);
 }
 
 function removeItem(id) {
-  socket.emit('removeItem', id);
+  if (confirm('Are you sure you want to remove this item? This action cannot be undone.')) {
+    socket.emit('removeItem', id);
+    showNotification('Item removed successfully');
+  }
+}
+
+function switchAdminTab(tabName) {
+  // Hide all tabs
+  document.getElementById('menuTab').classList.remove('active');
+  document.getElementById('ordersTab').classList.remove('active');
+  document.getElementById('statsTab').classList.remove('active');
+  
+  // Remove active class from all buttons
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  
+  // Show selected tab
+  document.getElementById(tabName + 'Tab').classList.add('active');
+  
+  // Add active class to clicked button
+  event.target.classList.add('active');
+  
+  // Load data for the tab
+  if (tabName === 'orders') {
+    loadAdminOrders();
+  } else if (tabName === 'stats') {
+    updateStatistics();
+  }
 }
 
 function loadAdminMenu() {
@@ -280,11 +323,10 @@ function loadAdminOrders() {
   const containerId = 'adminOrders';
   let container = document.getElementById(containerId);
   if (!container) {
-    // create container below adminMenu
     container = document.createElement('div');
     container.id = containerId;
-    container.style.marginTop = '20px';
-    document.getElementById('adminPanel').appendChild(container);
+    container.className = 'orders-list';
+    document.getElementById('ordersTab').appendChild(container);
   }
   const orders = window.allOrders || [];
   const query = (document.getElementById('adminSearch') && document.getElementById('adminSearch').value || '').toLowerCase().trim();
@@ -294,22 +336,39 @@ function loadAdminOrders() {
     if ((o.user && o.user.name && o.user.name.toLowerCase().includes(query)) || (o.user && o.user.email && o.user.email.toLowerCase().includes(query))) return true;
     if (o.items && o.items.some(it => it.name.toLowerCase().includes(query))) return true;
     return false;
-  });
+  }).sort((a, b) => b.orderId - a.orderId); // Sort by newest first
+  
   if (filtered.length === 0) {
-    container.innerHTML = '<h3>No orders yet</h3>';
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);"><p>📭 No orders yet</p></div>';
     return;
   }
-  container.innerHTML = '<h3>All Orders</h3>' + filtered.map(o => {
-    const items = o.items.map(it => `${it.qty} x ${it.name} (₹${it.price})`).join('<br>');
+  
+  container.innerHTML = filtered.map(o => {
+    const items = o.items.map(it => `${it.qty}x ${it.name} (₹${it.price})`).join(', ');
+    const timestamp = new Date(o.timestamp);
+    const timeStr = timestamp.toLocaleString();
     return `
-      <div class="card" style="padding:10px;margin-bottom:10px;">
-        <strong>Order #${o.orderId}</strong> — ${new Date(o.timestamp).toLocaleString()}<br>
-        <strong>${o.user.name}</strong> &lt;${o.user.email}&gt;<br>
-        ${items}<br>
-        <strong>Total: ₹${o.total}</strong><br>
-        <div style="margin-top:8px;">
-          <button class="btn btn-small" onclick="showAdminReceipt(${o.orderId})">📄 View Receipt</button>
-          <button class="btn btn-small" onclick="printAdminReceipt(${o.orderId})">🖨️ Print</button>
+      <div class="order-card">
+        <div class="order-header">
+          <div>
+            <span class="order-id">Order #${o.orderId}</span>
+            <span class="order-status pending" style="margin-left:10px;">PENDING</span>
+          </div>
+          <span class="order-time">${timeStr}</span>
+        </div>
+        <div class="order-customer">
+          <strong>👤 ${o.user.name}</strong>
+          <span class="email">📧 ${o.user.email}</span>
+        </div>
+        <div class="order-items">
+          <strong>Items:</strong> ${items}
+        </div>
+        <div class="order-total">
+          💰 Total: ₹${o.total}
+        </div>
+        <div class="order-actions">
+          <button class="btn btn-primary btn-small" onclick="showAdminReceipt(${o.orderId})">📄 View Receipt</button>
+          <button class="btn btn-success btn-small" onclick="printAdminReceipt(${o.orderId})">🖨️ Print</button>
         </div>
       </div>`;
   }).join('');
@@ -321,20 +380,23 @@ function renderUserHistory() {
   if (!container) {
     container = document.createElement('div');
     container.id = 'userHistory';
-    container.style.marginTop = '20px';
     document.getElementById('userSection').appendChild(container);
   }
   if (hist.length === 0) {
-    container.innerHTML = '<h3>Your Orders</h3><p>No previous orders.</p>';
+    container.innerHTML = '<h3 style="margin-top:30px;">📋 Your Order History</h3><p style="color:var(--muted);">No orders yet. Place your first order!</p>';
     return;
   }
-  container.innerHTML = '<h3>Your Orders</h3>' + hist.map(o => {
-    const items = o.items.map(it => `${it.qty} x ${it.name} (₹${it.price})`).join('<br>');
+  container.innerHTML = '<h3 style="margin-top:30px;">📋 Your Previous Orders</h3>' + hist.map(o => {
+    const items = o.items.map(it => `${it.qty}x ${it.name}`).join(', ');
+    const timestamp = new Date(o.timestamp).toLocaleDateString();
     return `
-      <div class="card" style="padding:10px;margin-bottom:10px;">
-        <strong>Order #${o.orderId}</strong> — ${new Date(o.timestamp).toLocaleString()}<br>
-        ${items}<br>
-        <strong>Total: ₹${o.total}</strong>
+      <div style="padding:12px;background:#f9fafb;border-radius:8px;margin-bottom:10px;border-left:4px solid var(--accent);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong>Order #${o.orderId}</strong>
+          <span style="font-size:0.85rem;color:var(--muted);">${timestamp}</span>
+        </div>
+        <div style="font-size:0.9rem;color:#374151;">📦 ${items}</div>
+        <div style="font-weight:600;color:var(--primary);margin-top:8px;">₹${o.total}</div>
       </div>`;
   }).join('');
 }
@@ -463,14 +525,56 @@ function printAdminReceipt(orderId) {
     </html>
   `;
   
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
-  w.focus();
   setTimeout(() => { w.print(); }, 500);
 }
 
-/* PWA */
+function updateStatistics() {
+  const orders = window.allOrders || [];
+  
+  if (orders.length === 0) {
+    document.getElementById('statsGrid').innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+        <p style="color: var(--muted); font-size: 1.1rem;">📊 No orders yet. Statistics will appear here once orders are placed.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Calculate statistics
+  const totalOrders = orders.length;
+  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+  const avgOrder = Math.round(totalRevenue / totalOrders);
+  
+  // Find most popular item
+  const itemCounts = {};
+  orders.forEach(o => {
+    o.items.forEach(it => {
+      itemCounts[it.name] = (itemCounts[it.name] || 0) + it.qty;
+    });
+  });
+  
+  const popularItem = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0];
+  const popularItemName = popularItem ? popularItem[0] : '-';
+  
+  // Update stat cards
+  document.getElementById('totalOrders').textContent = totalOrders;
+  document.getElementById('totalRevenue').textContent = '₹' + totalRevenue;
+  document.getElementById('avgOrder').textContent = '₹' + avgOrder;
+  document.getElementById('popularItem').textContent = popularItemName;
+  
+  // Update top items list
+  const topItems = Object.entries(itemCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => `
+      <div class="top-item">
+        <span class="top-item-name">🍔 ${name}</span>
+        <span class="top-item-count">${count} orders</span>
+      </div>
+    `).join('');
+  
+  document.getElementById('topItems').innerHTML = topItems || '<p style="color: var(--muted);">No item data available</p>';
+}
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js")
     .then(registration => {

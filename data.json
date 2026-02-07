@@ -1,5 +1,5 @@
 {
-  "nextOrderId": 2,
+  "nextOrderId": 3,
   "users": [
     {
       "name": "a",
@@ -24,6 +24,29 @@
       ],
       "total": 45,
       "timestamp": "2026-02-07T05:27:33.974Z"
+    },
+    {
+      "orderId": 2,
+      "user": {
+        "name": "a",
+        "email": "a@gmail.com"
+      },
+      "items": [
+        {
+          "id": 1,
+          "name": "Samosa",
+          "price": 15,
+          "qty": 4
+        },
+        {
+          "id": 3,
+          "name": "Cold Drink",
+          "price": 30,
+          "qty": 2
+        }
+      ],
+      "total": 120,
+      "timestamp": "2026-02-07T05:56:35.708Z"
     }
   ],
   "menu": [
@@ -31,7 +54,7 @@
       "id": 1,
       "name": "Samosa",
       "price": 15,
-      "orders": 3
+      "orders": 7
     },
     {
       "id": 2,
@@ -43,7 +66,7 @@
       "id": 3,
       "name": "Cold Drink",
       "price": 30,
-      "orders": 0
+      "orders": 2
     }
   ]
 }

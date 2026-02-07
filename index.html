@@ -43,13 +43,19 @@
 
 <!-- User Ordering Section -->
 <section id="userSection" class="card" style="display:none;">
-  <h2>🍽️ Today's Menu</h2>
+  <div class="user-header">
+    <div>
+      <h2 style="margin:0;">🍽️ Today's Menu</h2>
+      <p style="margin:5px 0 0 0; color:#6b7280; font-size:0.9rem;">Fresh items available now</p>
+    </div>
+    <button class="btn btn-secondary btn-small" onclick="logout()" style="align-self:flex-start;">🚪 Logout</button>
+  </div>
   <div id="menu" class="menu-grid"></div>
   <div class="order-summary">
     <h3>Total: ₹<span id="total">0</span></h3>
-    <button class="btn btn-success" onclick="placeOrder()">Place Order 🛒</button>
-    <button class="btn btn-secondary" onclick="logout()" style="margin-top: 10px;">Back to Login</button>
+    <button class="btn btn-success" onclick="placeOrder()">🛒 Place Order</button>
   </div>
+  <div id="userHistory" style="margin-top:30px;"></div>
 </section>
 
 <!-- User Login (name + email) -->
@@ -66,21 +72,68 @@
 
 <!-- Admin Panel -->
 <section id="adminPanel" class="card" style="display:none;">
-  <h2>👨‍🍳 Admin Dashboard</h2>
-  <div class="admin-form">
+  <div class="admin-header">
+    <h2>👨‍🍳 Admin Dashboard</h2>
+    <button class="btn btn-secondary btn-small" onclick="logout()">🚪 Logout</button>
+  </div>
+
+  <!-- Admin Tabs -->
+  <div class="admin-tabs">
+    <button class="tab-btn active" onclick="switchAdminTab('menu')">📋 Menu Management</button>
+    <button class="tab-btn" onclick="switchAdminTab('orders')">🛒 Orders</button>
+    <button class="tab-btn" onclick="switchAdminTab('stats')">📊 Statistics</button>
+  </div>
+
+  <!-- Menu Management Tab -->
+  <div id="menuTab" class="tab-content active">
     <h3>Add New Item</h3>
-    <div class="form-row">
-      <input type="text" id="itemName" placeholder="Item Name" class="input-field">
-      <input type="number" id="itemPrice" placeholder="Price (₹)" class="input-field">
-      <button class="btn btn-primary" onclick="addItem()">Add Item ➕</button>
+    <div class="admin-form">
+      <div class="form-row">
+        <input type="text" id="itemName" placeholder="Item Name" class="input-field">
+        <input type="number" id="itemPrice" placeholder="Price (₹)" class="input-field" min="1">
+        <button class="btn btn-success" onclick="addItem()">➕ Add Item</button>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 30px;">Current Menu Items</h3>
+    <div id="menuItems" class="items-list">
+      <ul id="adminMenu" class="admin-list"></ul>
     </div>
   </div>
-  <h3>📊 Orders Overview</h3>
-  <div style="margin-top:10px;">
-    <input type="text" id="adminSearch" placeholder="Search orders by ID, name, email, item..." class="input-field" style="width:100%;" oninput="loadAdminOrders()">
+
+  <!-- Orders Tab -->
+  <div id="ordersTab" class="tab-content" style="display:none;">
+    <h3>All Orders</h3>
+    <div class="search-wrapper">
+      <input type="text" id="adminSearch" placeholder="🔍 Search by Order ID, Customer Name, Email, or Item..." class="input-field" oninput="loadAdminOrders()">
+    </div>
+    <div id="adminOrders" class="orders-list"></div>
   </div>
-  <ul id="adminMenu" class="admin-list"></ul>
-  <button class="btn btn-secondary" onclick="logout()" style="margin-top: 20px;">Back to Login</button>
+
+  <!-- Statistics Tab -->
+  <div id="statsTab" class="tab-content" style="display:none;">
+    <h3>Sales Statistics</h3>
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-value" id="totalOrders">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value" id="totalRevenue">₹0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Popular Item</div>
+        <div class="stat-value" id="popularItem">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Order Value</div>
+        <div class="stat-value" id="avgOrder">₹0</div>
+      </div>
+    </div>
+    <h3 style="margin-top: 30px;">Top Selling Items</h3>
+    <div id="topItems" class="top-items-list"></div>
+  </div>
 </section>
 
 <!-- Receipt Modal for Admin -->
