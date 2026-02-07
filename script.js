@@ -163,14 +163,6 @@ function adminLogin() {
     document.getElementById("adminPassSection").style.display = "none";
     document.getElementById("adminPanel").style.display = "block";
     loadAdminMenu();
-    
-    // Immediately load and display orders from window.allOrders
-    // If it's already set from Socket.io, use it
-    // If not, it will be set when ordersUpdate event fires
-    setTimeout(() => {
-      loadAdminOrders();
-      updateStatistics();
-    }, 50);
   } else {
     showNotification("Wrong password", 'error');
   }
@@ -393,38 +385,39 @@ function loadAdminMenu() {
 
 function loadAdminOrders() {
   const container = document.getElementById('adminOrders');
-  if (!container) return;
+  if (!container) {
+    console.error('adminOrders container not found!');
+    return;
+  }
   
-  const orders = window.allOrders || [];
+  const orders = window.allOrders;
   if (!orders || orders.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;"><p>No orders yet</p></div>';
+    container.innerHTML = '<p style="text-align:center;color:#999;">No orders yet</p>';
     return;
   }
   
   let html = '';
-  for (let order of orders) {
-    const items = order.items.map(it => `${it.qty}x ${it.name}`).join(', ');
-    const date = new Date(order.timestamp).toLocaleString();
+  orders.forEach(order => {
+    const itemsList = order.items.map(it => `${it.qty}x ${it.name} (₹${it.price})`).join(', ');
+    const orderDate = new Date(order.timestamp).toLocaleString();
     html += `
-      <div class="order-card">
-        <div class="order-header">
-          <span class="order-id">Order #${order.orderId}</span>
-          <span class="order-time">${date}</span>
+      <div class="order-card" style="background:#fff;border:1px solid #ddd;padding:15px;margin:10px 0;border-radius:8px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;border-bottom:1px solid #eee;padding-bottom:10px;">
+          <strong>Order #${order.orderId}</strong>
+          <span style="color:#666;font-size:0.9em;">${orderDate}</span>
         </div>
-        <div class="order-customer">
-          <strong>${order.user.name}</strong> (${order.user.email})
+        <div style="margin:8px 0;">
+          <strong>${order.user.name}</strong><br>
+          <small style="color:#666;">${order.user.email}</small>
         </div>
-        <div class="order-items">
-          Items: ${items}
+        <div style="margin:8px 0;color:#555;">
+          ${itemsList}
         </div>
-        <div class="order-total">
+        <div style="margin-top:10px;font-size:1.1em;font-weight:bold;">
           Total: ₹${order.total}
         </div>
-        <div class="order-actions">
-          <button class="btn btn-primary btn-small" onclick="showAdminReceipt(${order.orderId})">View Receipt</button>
-        </div>
       </div>`;
-  }
+  });
   container.innerHTML = html;
 }
 
@@ -583,44 +576,7 @@ function printAdminReceipt(orderId) {
 }
 
 function updateStatistics() {
-  const orders = window.allOrders || [];
-  
-  if (!orders || orders.length === 0) {
-    document.getElementById('totalOrders').textContent = '0';
-    document.getElementById('totalRevenue').textContent = '₹0';
-    document.getElementById('avgOrder').textContent = '₹0';
-    document.getElementById('popularItem').textContent = '-';
-    document.getElementById('topItems').innerHTML = '<p>No orders yet</p>';
-    return;
-  }
-  
-  const totalOrders = orders.length;
-  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-  const avgOrder = Math.round(totalRevenue / totalOrders);
-  
-  const itemCounts = {};
-  orders.forEach(o => {
-    o.items.forEach(it => {
-      itemCounts[it.name] = (itemCounts[it.name] || 0) + it.qty;
-    });
-  });
-  
-  const popularItem = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0];
-  
-  document.getElementById('totalOrders').textContent = totalOrders;
-  document.getElementById('totalRevenue').textContent = '₹' + totalRevenue;
-  document.getElementById('avgOrder').textContent = '₹' + avgOrder;
-  document.getElementById('popularItem').textContent = popularItem ? popularItem[0] : '-';
-  
-  let topItemsHtml = '';
-  Object.entries(itemCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .forEach(([name, count]) => {
-      topItemsHtml += `<div class="top-item"><span>${name}</span> <span>${count} orders</span></div>`;
-    });
-  
-  document.getElementById('topItems').innerHTML = topItemsHtml || '<p>No data</p>';
+  // Placeholder - statistics tab not used in this version
 }
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js")

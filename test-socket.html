@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Socket.io Test</title>
+</head>
+<body>
+    <h1>Server Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="orders">Orders: <pre id="ordersContent">Loading...</pre></div>
+    
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io('http://localhost:3000');
+        
+        socket.on('connect', () => {
+            document.getElementById('status').innerHTML = '✅ Connected to server';
+        });
+        
+        socket.on('ordersUpdate', (orders) => {
+            console.log('Got orders:', orders);
+            document.getElementById('ordersContent').innerHTML = JSON.stringify(orders, null, 2);
+        });
+        
+        socket.on('menuUpdate', (menu) => {
+            console.log('Got menu:', menu);
+        });
+    </script>
+</body>
+</html>
